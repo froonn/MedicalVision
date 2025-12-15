@@ -55,3 +55,24 @@ export const confirmDiagnosis = async (analysisId, conclusion, isCorrect) => {
     });
     return response.data;
 };
+
+
+/**
+ * Получает полную историю анализов пациента по MRN.
+ */
+export const fetchPatientHistory = async (mrn) => {
+    // Используем новый маршрут /v1/patients/
+    const response = await axios.get(`/v1/patients/${mrn}/history`);
+    return response.data; // Возвращает объект { patient: {...}, analyses: [...] }
+};
+
+/**
+ * Отправляет план лечения для конкретного анализа.
+ */
+export const prescribeTreatment = async (analysisId, treatmentPlan) => {
+    // Используем новый маршрут /v1/patients/analyses/
+    const response = await axios.post(`/v1/patients/analyses/${analysisId}/prescribe`, {
+        treatment_plan: treatmentPlan,
+    });
+    return response.data;
+};

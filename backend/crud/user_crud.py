@@ -32,3 +32,22 @@ def create_user(db: Session, user: pydantic_models.UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+def get_all_users(db: Session, skip: int = 0, limit: int = 100):
+    """
+    Получает список всех пользователей системы.
+    """
+    return db.query(sql_models.User).offset(skip).limit(limit).all()
+
+# --- НОВАЯ ФУНКЦИЯ: Обновление роли пользователя ---
+def update_user_role(db: Session, user_id: int, new_role: str):
+    """
+    Обновляет роль пользователя по его ID.
+    """
+    db_user = db.query(sql_models.User).filter(sql_models.User.id == user_id).first()
+    if db_user:
+        db_user.role = new_role
+        db.commit()
+        db.refresh(db_user)
+    return db_user

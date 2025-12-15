@@ -2,8 +2,9 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from database import init_db
-from api.v1 import auth, analyses
 from fastapi.staticfiles import StaticFiles
+
+from api.v1 import *
 
 # Инициализация БД (создание таблиц)
 init_db()
@@ -33,6 +34,8 @@ app.include_router( # НОВЫЙ РОУТЕР
     prefix="/v1/analyses",
     tags=["Analyses"]
 )
+
+app.include_router(admin.router) # НОВЫЙ РОУТЕР
 
 # --- Вспомогательный маршрут для создания тестового пользователя (УДАЛИТЬ в продакшене!) ---
 from crud import user_crud

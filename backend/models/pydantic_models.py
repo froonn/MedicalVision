@@ -95,5 +95,42 @@ class ConclusionUpdate(BaseModel):
     is_correct: bool  # true = корректно (1), false = ошибочно (0)
 
 
+# --- Схема базового пользователя (для отображения, кто подтвердил) ---
+class UserBase(BaseModel):
+    username: str
+
+    class Config:
+        from_attributes = True
 
 
+# --- Расширенная схема анализа для Клинициста ---
+class ClinicianAnalysis(BaseModel):
+    id: int
+    date_of_analysis: datetime
+    image_path: str
+    # Assuming ResultInDB now includes 'treatment_plan' and other fields
+    results: Optional[ResultInDB] = None
+    diagnostician: Optional[UserBase] = None  # Кто подтвердил окончательный диагноз
+
+    class Config:
+        from_attributes = True
+
+
+# --- Схема ответа для полной истории пациента ---
+class PatientHistory(BaseModel):
+    patient: PatientBase
+    analyses: list[ClinicianAnalysis]
+
+
+# --- Схема запроса для обновления плана лечения ---
+class TreatmentUpdate(BaseModel):
+    treatment_plan: str
+
+class UserRoleUpdate(BaseModel):
+    role: str # Ожидаемые значения: 'diagnostician', 'clinician', 'admin'
+
+# --- Схема для метрик модели ---
+class ModelMetrics(BaseModel):
+    total_confirmed: int
+    correct_predictions: int
+    accuracy_percentage: float

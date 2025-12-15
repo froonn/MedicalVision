@@ -1,8 +1,9 @@
 # Файл: crud/analysis_crud.py
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from models import sql_models, pydantic_models
 from core import cv_stub
+from sqlalchemy import func  # Импорт функции для агрегации
 
 
 # Получение пациента по MRN
@@ -105,3 +106,113 @@ def update_analysis_conclusion(
     db.commit()
     db.refresh(db_result)
     return db_analysis
+
+
+# --- НОВАЯ ФУНКЦИЯ: Получение полной истории пациента по MRN ---
+def get_patient_history_by_mrn(db: Session, mrn: str):
+    """
+    Получает объект пациента и все связанные с ним анализы.
+    """
+    # 1. Находим пациента
+    patient = db.query(sql_models.Patient).filter(sql_models.Patient.medical_record_number == mrn).first()
+    if not patient:
+        return None
+
+    # 2. Получаем все анализы этого пациента
+    analyses = (
+        db.query(sql_models.Analysis)
+        .filter(sql_models.Analysis.patient_id == patient.id)
+        .options(
+            # Предзагружаем результаты и информацию о диагносте, который подтвердил диагноз
+            joinedload(sql_models.Analysis.results),
+            joinedload(sql_models.Analysis.diagnostician)
+        )
+        .order_by(sql_models.Analysis.date_of_analysis.desc())
+        .all()
+    )
+
+    return {"patient": patient, "analyses": analyses}
+
+
+# --- НОВАЯ ФУНКЦИЯ: Обновление плана лечения ---
+def update_analysis_treatment_plan(
+        db: Session,
+        analysis_id: int,
+        treatment_plan: str,
+        clinician_id: int
+):
+    """
+    Обновляет план лечения в результате анализа и записывает ID клинициста.
+    """
+    db_analysis = db.query(sql_models.Analysis).filter(sql_models.Analysis.id == analysis_id).first()
+
+    if not db_analysis:
+        return None
+
+    # Получаем или создаем результат
+    db_result = db.query(sql_models.Result).filter(sql_models.Result.analysis_id == analysis_id).first()
+    if not db_result:
+        # В рабочем процессе это не должно происходить, так как анализ уже был запущен.
+        return None
+
+    db_result.treatment_plan = treatment_plan
+    db_analysis.clinician_id = clinician_id  # Привязываем клинициста к анализу
+
+    db.commit()
+    db.refresh(db_result)
+    db.refresh(db_analysis)
+    return db_analysis
+
+
+def get_all_analyses(db: Session, skip: int = 0, limit: int = 100):
+    """
+    Получает все анализы, проведенные в системе, для Администратора.
+    """
+    return (
+        db.query(sql_models.Analysis)
+        .options(
+            joinedload(sql_models.Analysis.patient),
+            joinedload(sql_models.Analysis.results),
+            joinedload(sql_models.Analysis.diagnostician) # Добавим имя диагноста
+        )
+        .order_by(sql_models.Analysis.date_of_analysis.desc())
+        .offset(skip).limit(limit)
+        .all()
+    )
+
+
+# Файл: crud/analysis_crud.py (Дополнение)
+
+# --- НОВАЯ ФУНКЦИЯ: Получение метрик обратной связи ---
+def get_feedback_metrics(db: Session):
+    """
+    Рассчитывает процент корректных диагнозов системы на основе
+    подтверждений врачей-диагностов.
+    """
+
+    # Считаем общее количество подтвержденных анализов (где is_confirmed = True)
+    total_confirmed = db.query(sql_models.Result).filter(
+        sql_models.Result.is_confirmed == True
+    ).count()
+
+    if total_confirmed == 0:
+        return {
+            "total_confirmed": 0,
+            "correct_predictions": 0,
+            "accuracy_percentage": 0.0
+        }
+
+    # Считаем количество корректных прогнозов (feedback_correct = 1)
+    correct_predictions = db.query(sql_models.Result).filter(
+        sql_models.Result.is_confirmed == True,
+        sql_models.Result.feedback_correct == 1
+    ).count()
+
+    # Рассчитываем процент
+    accuracy_percentage = (correct_predictions / total_confirmed) * 100
+
+    return {
+        "total_confirmed": total_confirmed,
+        "correct_predictions": correct_predictions,
+        "accuracy_percentage": round(accuracy_percentage, 2)
+    }
