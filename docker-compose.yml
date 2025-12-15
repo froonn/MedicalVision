@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/run.py:/app/run.py
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5001
+      - DATABASE_URL=sqlite:///./medical_diagnosis.db
+    ports:
+      - "${PORT:-5001}:${PORT:-5001}"
+#    restart: unless-stopped
