@@ -11,19 +11,30 @@ def get_patient_by_mrn(db: Session, mrn: str):
     return db.query(sql_models.Patient).filter(sql_models.Patient.medical_record_number == mrn).first()
 
 
-# Создание анализа и результатов
+# --- НОВАЯ ФУНКЦИЯ: Создание пациента (для использования ниже) ---
+def create_patient(db: Session, mrn: str):
+    """Создает новую запись пациента только с MRN."""
+    db_patient = sql_models.Patient(medical_record_number=mrn)
+    db.add(db_patient)
+    db.commit()
+    db.refresh(db_patient)
+    return db_patient
+
+
 def create_analysis_and_run_cv(
         db: Session,
         patient_mrn: str,
         diagnostician_id: int,
         image_path: str
 ):
-    # 1. Найти пациента
+    # 1. Найти или создать пациента
     patient = get_patient_by_mrn(db, patient_mrn)
+
     if not patient:
-        # В реальной жизни здесь может быть создание нового пациента
-        # или HTTPException
-        raise ValueError(f"Пациент с MRN {patient_mrn} не найден.")
+        # --- ИСПРАВЛЕНИЕ: Автоматически создаем нового пациента ---
+        print(f"Пациент с MRN {patient_mrn} не найден. Создаю нового пациента.")
+        patient = create_patient(db, patient_mrn)
+        # --------------------------------------------------------
 
     # 2. Создать запись об анализе
     db_analysis = sql_models.Analysis(
@@ -35,7 +46,7 @@ def create_analysis_and_run_cv(
     db.commit()
     db.refresh(db_analysis)
 
-    # 3. Запустить заглушку CV
+    # 3. Запустить заглушку CV (остальное без изменений)
     cv_result = cv_stub.run_cv_analysis(image_path)
 
     # 4. Сохранить результаты CV

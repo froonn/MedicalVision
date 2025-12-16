@@ -1,104 +1,114 @@
-// src/App.jsx
+// src/App.jsx (ФИНАЛЬНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import DiagnosticianDashboard from './pages/DiagnosticianDashboard';
-import RegisterPage from './pages/RegisterPage'; // Импортируем новую страницу
 import ClinicianDashboard from './pages/ClinicianDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
 
-// Приватный маршрут для защиты страниц
+// --- 1. Компонент для защиты маршрутов (PrivateRoute) ---
 const PrivateRoute = ({ allowedRoles, children }) => {
     const { user, token } = useAuth();
 
-    if (!token || !user) {
-        // Если нет токена или пользователя, перенаправляем на логин
+    // Если токена нет, или пользователь не загружен, перенаправляем на логин
+    if (!token) {
         return <Navigate to="/" replace />;
     }
 
+    // Если данные пользователя загружаются, можно показать заглушку (опционально)
+    if (!user) {
+        return <div>Загрузка данных пользователя...</div>;
+    }
+
+    // Проверка роли
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-        // Если роль не разрешена, перенаправляем на другую страницу (например, 403 или главную)
         return <Navigate to="/unauthorized" replace />;
     }
 
     return children;
 };
 
-const AppRoutes = () => {
-    return (
-        <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} /> {/* НОВЫЙ МАРШРУТ */}
 
-            {/* Защищенные маршруты */}
-            <Route
-                path="/diagnostician"
-                element={
-                    <PrivateRoute allowedRoles={['diagnostician']}>
-                        <DiagnosticianDashboard />
-                    </PrivateRoute>
-                }
-            />
+// --- 2. Логика Перенаправления после Входа (HomeRedirect) ---
+const HomeRedirect = () => {
+    const { user, token } = useAuth();
 
-            <Route
-                path="/admin"
-                element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                        <AdminDashboard />
-                    </PrivateRoute>
-                }
-            />
-            {/* Добавьте маршруты для других ролей */}
-            <Route path="*" element={<h1>404 Страница не найдена</h1>} />
-        </Routes>
-    );
+    // Если токен есть, но user еще не загружен (кратковременное состояние), ждем
+    if (token && !user) {
+        return <div>Загрузка данных...</div>;
+    }
+
+    // Если пользователь загружен, перенаправляем на нужный дашборд
+    if (user) {
+        switch (user.role) {
+            case 'admin':
+                return <Navigate to="/admin" replace />;
+            case 'diagnostician':
+                return <Navigate to="/diagnostician" replace />;
+            case 'clinician':
+                return <Navigate to="/clinician" replace />;
+            default:
+                return <div>Доступ для вашей роли не настроен.</div>;
+        }
+    }
+
+    // Если ни токена, ни пользователя нет, ведем на страницу логина
+    return <LoginPage />;
 };
 
 
+// --- 3. Основной Компонент Приложения ---
 const App = () => {
     return (
         <AuthProvider>
             <Router>
                 <Routes>
-                    <Route path="/login" element={<Login />} />
+                    {/* Public routes */}
+                    <Route path="/" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/unauthorized" element={<h1>403: Доступ запрещен</h1>} />
 
-                    {/* Маршрут для Диагноста */}
-                    <Route path="/diagnostician" element={
-                        <ProtectedRoute element={<DiagnosticianDashboard />} requiredRole="diagnostician" />
-                    } />
+                    {/* Redirect route (проверяет авторизацию и перенаправляет) */}
+                    <Route path="/home" element={<HomeRedirect />} />
 
-                    {/* НОВЫЙ Маршрут для Клинициста */}
-                    <Route path="/clinician" element={
-                        <ProtectedRoute element={<ClinicianDashboard />} requiredRole="clinician" />
-                    } />
+                    {/* Private/Protected routes */}
+                    <Route
+                        path="/diagnostician"
+                        element={
+                            <PrivateRoute allowedRoles={['diagnostician']}>
+                                <DiagnosticianDashboard />
+                            </PrivateRoute>
+                        }
+                    />
 
-                    {/* Маршрут по умолчанию (для перенаправления) */}
-                    <Route path="/" element={<HomeRedirect />} />
+                    <Route
+                        path="/clinician"
+                        element={
+                            <PrivateRoute allowedRoles={['clinician']}>
+                                <ClinicianDashboard />
+                            </PrivateRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/admin"
+                        element={
+                            <PrivateRoute allowedRoles={['admin']}>
+                                <AdminDashboard />
+                            </PrivateRoute>
+                        }
+                    />
+
+                    {/* Fallback route */}
+                    <Route path="*" element={<h1>404 Страница не найдена</h1>} />
                 </Routes>
             </Router>
         </AuthProvider>
     );
-};
-
-// Обновление логики перенаправления (если используется HomeRedirect)
-const HomeRedirect = () => {
-    const { user } = useAuth();
-    if (user) {
-        if (user.role === 'admin') {
-            return <Navigate to="/admin" replace />;
-        }
-        if (user.role === 'diagnostician') {
-            return <Navigate to="/diagnostician" replace />;
-        }
-        if (user.role === 'clinician') {
-            return <Navigate to="/clinician" replace />;
-        }
-        return <div>Доступ для вашей роли не настроен.</div>;
-    }
-    return <Navigate to="/" replace />; // Предполагаем, что "/" ведет на логин
 };
 
 export default App;

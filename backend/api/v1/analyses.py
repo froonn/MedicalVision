@@ -6,7 +6,7 @@ import os
 
 from database import get_db
 from crud import analysis_crud
-from api.v1.auth import get_current_user
+from core.security import get_current_user
 from models.pydantic_models import *
 
 router = APIRouter()

@@ -35,42 +35,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # Создание токена
     access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
-        data={"sub": user.username, "role": user.role},
+        data={"sub": str(user.id), "role": user.role},
         expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# --- Dependency для защиты маршрутов (используется в Depends) ---
-async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    """
-    Извлекает и проверяет токен. Возвращает объект пользователя.
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Не удалось проверить учетные данные",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    payload = security.decode_access_token(token)
-    if payload is None:
-        raise credentials_exception
-
-    username: str = payload.get("sub")
-    if username is None:
-        raise credentials_exception
-
-    user = user_crud.get_user_by_username(db, username=username)
-    if user is None:
-        raise credentials_exception
-
-    return user
-
-
 # --- Пример защищенного маршрута (для проверки) ---
 @router.get("/me", response_model=pydantic_models.User)
-async def read_users_me(current_user: pydantic_models.User = Depends(get_current_user)):
+async def read_users_me(
+    # ИСПОЛЬЗУЙТЕ ИМПОРТИРОВАННУЮ ФУНКЦИЮ!
+    current_user: pydantic_models.User = Depends(security.get_current_user)
+):
     """
     Возвращает информацию о текущем авторизованном пользователе.
     """

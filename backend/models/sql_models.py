@@ -1,3 +1,5 @@
+# models/sql_models.py
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -13,6 +15,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String)  # 'diagnostician', 'clinician', 'admin'
     is_active = Column(Boolean, default=True)
+    analyses_assigned = relationship("Analysis", back_populates="diagnostician")
 
 
 class Patient(Base):
@@ -34,6 +37,7 @@ class Analysis(Base):
 
     patient = relationship("Patient")
     results = relationship("Result", back_populates="analysis", uselist=False)
+    diagnostician = relationship("User", back_populates="analyses_assigned")
 
 
 class Result(Base):

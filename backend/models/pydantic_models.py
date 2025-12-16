@@ -69,8 +69,9 @@ class AnalysisWithResult(BaseModel):
 
 # --- Схема данных пациента (для отображения в списке) ---
 class PatientBase(BaseModel):
-    first_name: str
-    last_name: str
+    # Теперь эти поля разрешают None, что соответствует данным из БД.
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     medical_record_number: str
 
     class Config:
@@ -82,7 +83,7 @@ class AnalysisFull(BaseModel):
     id: int
     date_of_analysis: datetime
     image_path: str
-    patient: PatientBase
+    patient: PatientBase  # <-- Теперь использует исправленный PatientBase
     results: Optional[ResultInDB] = None
 
     class Config:

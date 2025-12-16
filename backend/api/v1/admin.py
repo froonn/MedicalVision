@@ -76,7 +76,7 @@ async def list_all_analyses(
     return analyses
 
 
-router.get(
+@router.get(  # <--- ДОБАВЛЕН ДЕКОРАТОР @
     "/model/feedback_metrics",
     response_model=pydantic_models.ModelMetrics,
     summary="Получить метрики точности модели CV на основе обратной связи от врачей"

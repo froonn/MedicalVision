@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from database import init_db
 from fastapi.staticfiles import StaticFiles
 
-from api.v1 import *
+from api.v1 import auth, analyses, admin
 
 # Инициализация БД (создание таблиц)
 init_db()

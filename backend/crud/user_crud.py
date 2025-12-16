@@ -9,19 +9,19 @@ from core.security import get_password_hash
 def get_user_by_username(db: Session, username: str):
     return db.query(sql_models.User).filter(sql_models.User.username == username).first()
 
+def get_user_by_id(db: Session, user_id: int):
+    """Получает пользователя по его ID."""
+    return db.query(sql_models.User).filter(sql_models.User.id == user_id).first()
+
 
 # Функция для создания нового пользователя
 def create_user(db: Session, user: pydantic_models.UserCreate):
-    # --- ИСПРАВЛЕНИЕ: Обрезаем пароль до 72 байт перед хешированием ---
-    # Пароль должен быть преобразован в байты для корректного усечения по длине
-    raw_password_bytes = user.password.encode('utf-8')
-    # Усекаем до 72 байт
-    truncated_password = raw_password_bytes[:72].decode('utf-8', errors='ignore')
+    # --- ИСПРАВЛЕНИЕ: Удаляем ручное усечение пароля ---
+    # passlib/bcrypt обрабатывает усечение до 72 байт автоматически.
 
-    # Хешируем обрезанный пароль
-    hashed_password = get_password_hash(truncated_password)
-
-    # --- Конец ИСПРАВЛЕНИЯ ---
+    # Хешируем оригинальный пароль
+    print(user)
+    hashed_password = get_password_hash(user.password)
 
     db_user = sql_models.User(
         username=user.username,
