@@ -12,8 +12,11 @@ Build docker containers.
 docker compose build
 ```
 
-Launching
+> [!NOTE]
+> The first time after building containers, the project may fail to launch. You should launch it, wait 10-15 seconds, and then restart the project. Subsequent launches should be trouble-free.
+
 ```bash
 docker compose up
 ```
+
 
