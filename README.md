@@ -19,4 +19,7 @@ docker compose build
 docker compose up
 ```
 
-
+> [!NOTE]
+> Login details for the admin account:
+> login: `admin`
+> passwd: `password`
